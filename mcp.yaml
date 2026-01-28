@@ -1,0 +1,13 @@
+version: "1"
+
+tools:
+  - name: code_covered.gaps
+    description: Parse coverage.py coverage.json and produce deterministic test-intent suggestions.
+    entrypoint: mcp_code_covered.tool:handle
+
+    # Where your manifest + schemas live (keeps things tidy for runners that want file paths)
+    manifest: mcp_code_covered/manifest.json
+
+    schemas:
+      request: mcp_code_covered/schemas/code_covered.gaps.request.schema.v0.1.json
+      response: mcp_code_covered/schemas/code_covered.gaps.response.schema.v0.1.json

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "code_covered.gaps.request.schema.v0.1.json",
+  "title": "code_covered.gaps Request",
+  "description": "Request schema for the code_covered.gaps MCP tool.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["coverage"],
+  "properties": {
+    "coverage": {
+      "description": "coverage.py JSON report input (from `coverage json -o coverage.json` or `pytest --cov-report=json`).",
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "Parsed coverage.json content (inline).",
+          "additionalProperties": true
+        },
+        {
+          "type": "object",
+          "description": "Artifact reference for hosts that support artifact storage.",
+          "additionalProperties": false,
+          "required": ["artifact_id", "media_type"],
+          "properties": {
+            "artifact_id": {
+              "type": "string",
+              "description": "Unique identifier for the artifact."
+            },
+            "media_type": {
+              "const": "application/json"
+            },
+            "locator": {
+              "type": "string",
+              "description": "Optional path or URI the host can resolve (e.g., file path)."
+            },
+            "digest": {
+              "type": "string",
+              "description": "Optional content hash in format sha256:<hex>."
+            }
+          }
+        }
+      ]
+    },
+    "format": {
+      "type": "string",
+      "enum": ["json", "text"],
+      "default": "json",
+      "description": "Output format. 'json' returns structured result only, 'text' includes human-readable output."
+    },
+    "fail_on": {
+      "type": "string",
+      "enum": ["none", "critical", "high", "any"],
+      "default": "none",
+      "description": "Threshold for non-zero exit code (exit_code=2 if threshold met). Evaluated against filtered suggestions BEFORE limit is applied. 'none' always returns 0, 'critical' fails on critical gaps only, 'high' fails on high or critical gaps, 'any' fails if any gap exists."
+    },
+    "repo_root": {
+      "type": "string",
+      "description": "Optional repository root for source file path resolution. Paths in coverage.json are resolved relative to this."
+    },
+    "priority_filter": {
+      "type": "string",
+      "enum": ["critical", "high", "medium", "low"],
+      "description": "Optional filter to only return suggestions at or above this priority level."
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Optional limit on number of suggestions returned. Applied AFTER priority_filter but does NOT affect fail_on evaluation (gating sees all filtered gaps)."
+    }
+  }
+}

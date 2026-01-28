@@ -33,6 +33,8 @@ dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
 ]
+# MCP adapter has no additional runtime deps beyond the engine
+mcp = []
 
 [project.urls]
 Homepage = "https://github.com/mcp-tool-shop/code-covered"
@@ -44,14 +46,14 @@ code-covered = "cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["analyzer*"]
+include = ["analyzer*", "mcp_code_covered*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = ["-v", "--tb=short"]
 
 [tool.coverage.run]
-source = ["analyzer"]
+source = ["analyzer", "mcp_code_covered"]
 branch = true
 omit = ["*/tests/*", "*/__pycache__/*"]
 

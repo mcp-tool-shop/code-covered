@@ -1,0 +1,16 @@
+{
+  "name": "code_covered.gaps",
+  "version": "0.1.0",
+  "description": "Analyze coverage.py JSON reports and generate deterministic test suggestions for uncovered code paths.",
+  "author": "mcp-tool-shop",
+  "license": "MIT",
+  "request_schema": "schemas/code_covered.gaps.request.schema.v0.1.json",
+  "response_schema": "schemas/code_covered.gaps.response.schema.v0.1.json",
+  "entrypoint": "mcp_code_covered.tool:handle",
+  "capabilities": {
+    "supports_artifact_input": true,
+    "supports_inline_input": true,
+    "deterministic": true
+  },
+  "tags": ["coverage", "testing", "python", "code-quality"]
+}

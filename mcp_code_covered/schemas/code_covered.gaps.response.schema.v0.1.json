@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "code_covered.gaps.response.schema.v0.1.json",
+  "title": "code_covered.gaps Response",
+  "description": "Response schema for the code_covered.gaps MCP tool.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["exit_code", "result"],
+  "properties": {
+    "exit_code": {
+      "type": "integer",
+      "enum": [0, 1, 2],
+      "description": "Exit code: 0 = success, 1 = error (invalid input, missing files), 2 = threshold met (gaps found matching fail_on criteria)."
+    },
+    "result": {
+      "type": "object",
+      "description": "Structured gaps report.",
+      "additionalProperties": false,
+      "properties": {
+        "coverage_percent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Overall coverage percentage."
+        },
+        "files_analyzed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of files in coverage report."
+        },
+        "files_with_gaps": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of files with uncovered code."
+        },
+        "total_suggestions": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of test suggestions (before any limit applied)."
+        },
+        "suggestions": {
+          "type": "array",
+          "description": "List of test suggestions.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["test_name", "test_file", "description", "covers_lines", "priority", "code_template", "block_type"],
+            "properties": {
+              "test_name": {
+                "type": "string",
+                "description": "Suggested test function name."
+              },
+              "test_file": {
+                "type": "string",
+                "description": "Suggested test file path."
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-readable description of what the test covers."
+              },
+              "covers_lines": {
+                "type": "array",
+                "items": { "type": "integer" },
+                "description": "Line numbers this test would cover."
+              },
+              "priority": {
+                "type": "string",
+                "enum": ["critical", "high", "medium", "low"],
+                "description": "Priority level of this gap."
+              },
+              "code_template": {
+                "type": "string",
+                "description": "Generated test code template."
+              },
+              "setup_hints": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Hints for test setup (mocking, fixtures, etc.)."
+              },
+              "block_type": {
+                "type": "string",
+                "description": "Type of uncovered code block (exception_handler, if_true_branch, etc.)."
+              }
+            }
+          }
+        },
+        "by_priority": {
+          "type": "object",
+          "description": "Count of suggestions by priority level.",
+          "additionalProperties": false,
+          "properties": {
+            "critical": { "type": "integer", "minimum": 0 },
+            "high": { "type": "integer", "minimum": 0 },
+            "medium": { "type": "integer", "minimum": 0 },
+            "low": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "text": {
+      "type": "string",
+      "description": "Optional human-readable output (included when format='text')."
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Warning messages (e.g., source files not found)."
+    }
+  }
+}

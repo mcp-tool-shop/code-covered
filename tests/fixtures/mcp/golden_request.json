@@ -1,0 +1,13 @@
+{
+  "coverage": {
+    "files": {
+      "src/validator.py": {
+        "executed_lines": [1, 2, 3, 5, 6, 10, 11],
+        "missing_lines": [7, 8, 12, 13],
+        "excluded_lines": []
+      }
+    }
+  },
+  "format": "json",
+  "fail_on": "critical"
+}

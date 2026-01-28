@@ -17,17 +17,26 @@ Usage:
     code-covered gaps coverage.json
 
     # Or programmatically
-    from code_covered.analyzer import find_coverage_gaps
-    suggestions = find_coverage_gaps("coverage.json")
+    from analyzer.coverage_gaps import find_coverage_gaps
+    suggestions, warnings = find_coverage_gaps("coverage.json")
+
+Example:
+    >>> suggestions, warnings = find_coverage_gaps("coverage.json")
+    >>> for s in suggestions:
+    ...     print(f"{s.priority}: {s.test_name}")
+    critical: test_validator_validate_handles_exception
+    high: test_parser_parse_when_condition_false
 """
 
 import ast
 import json
+import logging
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from .static_analyzer import StaticAnalyzer, FunctionInfo
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -108,7 +117,19 @@ class CoverageParser:
     """Parse coverage.py JSON output."""
 
     def parse(self, json_path: str) -> CoverageReport:
-        """Parse coverage.json file."""
+        """
+        Parse coverage.json file.
+
+        Args:
+            json_path: Path to coverage.json
+
+        Returns:
+            CoverageReport with file-level coverage data
+
+        Raises:
+            FileNotFoundError: If json_path doesn't exist
+            json.JSONDecodeError: If file is not valid JSON
+        """
         with open(json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
@@ -163,6 +184,7 @@ class GapAnalyzer(ast.NodeVisitor):
         self._current_class: Optional[str] = None
         self._current_function: Optional[str] = None
         self._current_file: str = ""
+        self._seen_blocks: set[tuple[int, int]] = set()  # Avoid duplicates
 
     def analyze(self, file_path: str) -> list[UncoveredBlock]:
         """Analyze a file and return uncovered blocks with context."""
@@ -171,8 +193,8 @@ class GapAnalyzer(ast.NodeVisitor):
         try:
             tree = ast.parse(self.source_code)
             self.visit(tree)
-        except SyntaxError:
-            # If we can't parse, fall back to line-based analysis
+        except SyntaxError as e:
+            logger.debug(f"Syntax error in {file_path}: {e}, falling back to line-based analysis")
             self._analyze_by_lines()
 
         return self.uncovered_blocks
@@ -183,6 +205,7 @@ class GapAnalyzer(ast.NodeVisitor):
         if not sorted_missing:
             return
 
+        # Group consecutive lines
         groups: list[list[int]] = []
         current_group = [sorted_missing[0]]
 
@@ -227,10 +250,12 @@ class GapAnalyzer(ast.NodeVisitor):
         self._current_function = node.name
 
         # Check if function body has uncovered lines
-        func_lines = set(range(node.lineno, node.end_lineno + 1 if node.end_lineno else node.lineno + 1))
+        end_line = node.end_lineno or node.lineno
+        func_lines = set(range(node.lineno, end_line + 1))
         uncovered_in_func = func_lines & self.missing_lines
 
         if uncovered_in_func:
+            # Walk function body to find specific uncovered constructs
             for child in ast.walk(node):
                 self._analyze_node(child)
 
@@ -245,6 +270,13 @@ class GapAnalyzer(ast.NodeVisitor):
         line = node.lineno
         if line not in self.missing_lines:
             return
+
+        # Avoid duplicate blocks
+        end_line = getattr(node, "end_lineno", line) or line
+        block_key = (line, end_line)
+        if block_key in self._seen_blocks:
+            return
+        self._seen_blocks.add(block_key)
 
         if isinstance(node, ast.If):
             self._analyze_if(node)
@@ -376,7 +408,7 @@ class GapAnalyzer(ast.NodeVisitor):
             return "..."
 
     def _get_code_snippet(self, start: int, end: int) -> str:
-        """Get code snippet for line range."""
+        """Get code snippet for line range (1-indexed)."""
         try:
             lines = self.source_lines[start - 1:end]
             return "\n".join(lines)
@@ -386,6 +418,10 @@ class GapAnalyzer(ast.NodeVisitor):
 
 class GapSuggestionGenerator:
     """Generate test suggestions from uncovered blocks."""
+
+    # Regex compiled once at class level for performance
+    _CAMEL_RE1 = re.compile(r"(.)([A-Z][a-z]+)")
+    _CAMEL_RE2 = re.compile(r"([a-z0-9])([A-Z])")
 
     def generate(
         self,
@@ -621,14 +657,18 @@ class GapSuggestionGenerator:
             hints.append("Mock file operations with tmp_path fixture")
         if "await" in snippet_lower or "async" in snippet_lower:
             hints.append("Use @pytest.mark.asyncio decorator")
-        if "database" in snippet_lower or "cursor" in snippet_lower:
+        if "database" in snippet_lower or "cursor" in snippet_lower or "session" in snippet_lower:
             hints.append("Mock database connections")
-        if "datetime" in snippet_lower or "time" in snippet_lower:
+        if "datetime" in snippet_lower or "time." in snippet_lower:
             hints.append("Use freezegun or mock datetime.now()")
         if "random" in snippet_lower:
             hints.append("Seed random or mock random functions")
         if "environ" in snippet_lower or "getenv" in snippet_lower:
             hints.append("Use monkeypatch.setenv() for env vars")
+        if "subprocess" in snippet_lower or "popen" in snippet_lower:
+            hints.append("Mock subprocess calls")
+        if "socket" in snippet_lower:
+            hints.append("Mock socket connections")
 
         return hints
 
@@ -650,21 +690,31 @@ class GapSuggestionGenerator:
         return " ".join(parts)
 
     def _suggest_test_file(self, source_path: str) -> str:
-        """Suggest a test file path."""
+        """Suggest a test file path that avoids collisions."""
         path = Path(source_path)
+
+        # Include parent directory to avoid collisions
+        # src/utils/validator.py -> tests/test_utils_validator.py
+        # src/data/validator.py -> tests/test_data_validator.py
+        parts = path.parts
+        if len(parts) >= 2:
+            parent = parts[-2]
+            # Skip common non-informative parent names
+            if parent not in ("src", "lib", ".", "app"):
+                return f"tests/test_{parent}_{path.stem}.py"
+
         return f"tests/test_{path.stem}.py"
 
     def _to_snake_case(self, name: str) -> str:
         """Convert CamelCase to snake_case."""
-        import re
-        s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
-        return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+        s1 = self._CAMEL_RE1.sub(r"\1_\2", name)
+        return self._CAMEL_RE2.sub(r"\1_\2", s1).lower()
 
 
 def find_coverage_gaps(
     coverage_json: str,
     source_root: Optional[str] = None,
-) -> list[GapSuggestion]:
+) -> tuple[list[GapSuggestion], list[str]]:
     """
     Main entry point: Find what tests are missing based on coverage.
 
@@ -673,27 +723,47 @@ def find_coverage_gaps(
         source_root: Root directory for source files
 
     Returns:
-        List of test suggestions with templates
+        Tuple of (suggestions, warnings) where:
+        - suggestions: List of test suggestions with templates
+        - warnings: List of warning messages (e.g., files not found)
+
+    Example:
+        >>> suggestions, warnings = find_coverage_gaps("coverage.json")
+        >>> print(f"Found {len(suggestions)} gaps, {len(warnings)} warnings")
     """
     parser = CoverageParser()
     report = parser.parse(coverage_json)
 
     all_suggestions: list[GapSuggestion] = []
+    warnings: list[str] = []
 
     for file_path, file_cov in report.files.items():
         if not file_cov.missing_lines:
             continue
 
-        try:
-            actual_path = file_path
-            if source_root:
-                actual_path = str(Path(source_root) / file_path)
+        # Resolve actual path
+        actual_path = file_path
+        if source_root:
+            actual_path = str(Path(source_root) / file_path)
 
-            with open(actual_path, "r", encoding="utf-8") as f:
+        # Try to read source file
+        try:
+            with open(actual_path, "r", encoding="utf-8", errors="replace") as f:
                 source_code = f.read()
         except FileNotFoundError:
+            warnings.append(f"Source file not found: {actual_path}")
+            logger.warning(f"Source file not found: {actual_path}")
+            continue
+        except PermissionError:
+            warnings.append(f"Permission denied reading: {actual_path}")
+            logger.warning(f"Permission denied reading: {actual_path}")
+            continue
+        except Exception as e:
+            warnings.append(f"Error reading {actual_path}: {e}")
+            logger.warning(f"Error reading {actual_path}: {e}")
             continue
 
+        # Analyze and generate suggestions
         analyzer = GapAnalyzer(source_code, file_cov.missing_lines)
         blocks = analyzer.analyze(file_path)
 
@@ -701,7 +771,7 @@ def find_coverage_gaps(
         suggestions = generator.generate(blocks, file_path)
         all_suggestions.extend(suggestions)
 
-    return all_suggestions
+    return all_suggestions, warnings
 
 
 def print_coverage_gaps(suggestions: list[GapSuggestion]) -> None:

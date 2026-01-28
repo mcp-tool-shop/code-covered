@@ -2,31 +2,45 @@
 Code-Covered CLI
 
 Commands:
-    gaps      - Find coverage gaps and suggest missing tests (NEW!)
+    gaps      - Find coverage gaps and suggest missing tests
     analyze   - Static analysis for code issues
     generate  - Generate tests for code
-    train     - Run training pipeline
-    ui        - Launch web interface
 """
 
 import argparse
+import logging
 import sys
 from pathlib import Path
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s: %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 
 def cmd_gaps(args):
     """Find coverage gaps and suggest what tests to write."""
-    from analyzer import find_coverage_gaps, print_coverage_gaps, CoverageParser
+    from analyzer.coverage_gaps import (
+        find_coverage_gaps,
+        print_coverage_gaps,
+        CoverageParser,
+    )
 
     coverage_path = Path(args.coverage_json)
     if not coverage_path.exists():
-        print(f"Error: Coverage file not found: {coverage_path}")
+        logger.error(f"Coverage file not found: {coverage_path}")
         print("\nGenerate it with: pytest --cov=yourmodule --cov-report=json")
         return 1
 
     # Parse coverage report for summary
-    parser = CoverageParser()
-    report = parser.parse(str(coverage_path))
+    try:
+        parser = CoverageParser()
+        report = parser.parse(str(coverage_path))
+    except Exception as e:
+        logger.error(f"Failed to parse coverage file: {e}")
+        return 1
 
     print(f"\n{'='*60}")
     print("Code-Covered - Coverage Gap Finder")
@@ -35,10 +49,18 @@ def cmd_gaps(args):
     print(f"Files with gaps: {sum(1 for f in report.files.values() if f.missing_lines)}")
 
     # Find and print suggestions
-    suggestions = find_coverage_gaps(
+    suggestions, warnings = find_coverage_gaps(
         str(coverage_path),
         source_root=args.source_root,
     )
+
+    # Show any warnings about files we couldn't process
+    if warnings and args.verbose:
+        print(f"\nWarnings ({len(warnings)}):")
+        for w in warnings[:5]:
+            print(f"  - {w}")
+        if len(warnings) > 5:
+            print(f"  ... and {len(warnings) - 5} more")
 
     if args.priority:
         suggestions = [s for s in suggestions if s.priority == args.priority]
@@ -93,9 +115,13 @@ def cmd_gaps(args):
 
 def cmd_analyze(args):
     """Run static analysis on code."""
-    from analyzer import StaticAnalyzer
+    from analyzer.static_analyzer import StaticAnalyzer
 
     path = Path(args.path)
+    if not path.exists():
+        logger.error(f"Path not found: {path}")
+        return 1
+
     analyzer = StaticAnalyzer()
 
     if path.is_file():
@@ -146,9 +172,13 @@ def cmd_analyze(args):
 
 def cmd_generate(args):
     """Generate tests for code."""
-    from analyzer import TestGenerator
+    from analyzer.test_generator import TestGenerator
 
     path = Path(args.path)
+    if not path.exists():
+        logger.error(f"Path not found: {path}")
+        return 1
+
     generator = TestGenerator()
 
     if path.is_file():
@@ -192,21 +222,6 @@ def cmd_generate(args):
     return 0
 
 
-def cmd_train(args):
-    """Run training pipeline."""
-    print("Training via CLI - use 'python webui.py' for interactive training")
-    print("Or run: python -m training.sft_trainer --help")
-    return 0
-
-
-def cmd_ui(args):
-    """Launch web interface."""
-    import webui
-    # The webui module handles its own launch
-    webui.demo.launch(server_port=args.port, share=args.share)
-    return 0
-
-
 def main():
     parser = argparse.ArgumentParser(
         prog="code-covered",
@@ -214,7 +229,7 @@ def main():
     )
     subparsers = parser.add_subparsers(dest="command")
 
-    # Gaps command (NEW - the main feature!)
+    # Gaps command (the main feature!)
     gaps_p = subparsers.add_parser(
         "gaps",
         help="Find coverage gaps and suggest missing tests",
@@ -242,16 +257,6 @@ def main():
     gen_p.add_argument("-o", "--output", help="Output file or directory")
     gen_p.add_argument("--no-recursive", action="store_true")
     gen_p.set_defaults(func=cmd_generate)
-
-    # Train command
-    train_p = subparsers.add_parser("train", help="Run training")
-    train_p.set_defaults(func=cmd_train)
-
-    # UI command
-    ui_p = subparsers.add_parser("ui", help="Launch web interface")
-    ui_p.add_argument("--port", type=int, default=7861)
-    ui_p.add_argument("--share", action="store_true")
-    ui_p.set_defaults(func=cmd_ui)
 
     args = parser.parse_args()
 

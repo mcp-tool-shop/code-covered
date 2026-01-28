@@ -119,6 +119,41 @@ code-covered coverage.json -o tests/test_missing.py
 
 # Specify source root (if coverage paths are relative)
 code-covered coverage.json --source-root ./src
+
+# JSON output for CI pipelines
+code-covered coverage.json --format json
+```
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success (gaps found or no gaps) |
+| 1 | Error (file not found, parse error) |
+
+### JSON Output
+
+Use `--format json` for CI integration:
+
+```json
+{
+  "coverage_percent": 74.5,
+  "files_analyzed": 3,
+  "files_with_gaps": 1,
+  "suggestions": [
+    {
+      "test_name": "test_validator_validate_input_handles_exception",
+      "test_file": "tests/test_validator.py",
+      "description": "In validate_input() lines 23-27 - when ValueError is raised",
+      "covers_lines": [23, 24, 25, 26, 27],
+      "priority": "critical",
+      "code_template": "def test_...",
+      "setup_hints": ["Mock HTTP requests"],
+      "block_type": "exception_handler"
+    }
+  ],
+  "warnings": []
+}
 ```
 
 ## Python API

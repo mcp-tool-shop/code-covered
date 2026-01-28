@@ -10,6 +10,7 @@ Usage:
 """
 
 import argparse
+import json
 import logging
 import sys
 from pathlib import Path
@@ -26,6 +27,10 @@ def cmd_gaps(args):
     """Find coverage gaps and suggest what tests to write."""
     from analyzer import find_coverage_gaps, print_coverage_gaps, CoverageParser
 
+    # Suppress logging in JSON mode for clean output
+    if args.format == "json":
+        logging.getLogger("analyzer.coverage_gaps").setLevel(logging.ERROR)
+
     coverage_path = Path(args.coverage_json)
     if not coverage_path.exists():
         print(f"Error: Coverage file not found: {coverage_path}")
@@ -38,16 +43,13 @@ def cmd_gaps(args):
         parser = CoverageParser()
         report = parser.parse(str(coverage_path))
     except Exception as e:
-        print(f"Error: Failed to parse coverage file: {e}")
+        if args.format == "json":
+            print(json.dumps({"error": str(e)}, indent=2))
+        else:
+            print(f"Error: Failed to parse coverage file: {e}")
         return 1
 
-    print(f"\n{'='*60}")
-    print("code-covered")
-    print(f"{'='*60}")
-    print(f"Coverage: {report.coverage_percent:.1f}% ({report.total_covered}/{report.total_covered + report.total_missing} lines)")
-
     files_with_gaps = sum(1 for f in report.files.values() if f.missing_lines)
-    print(f"Files analyzed: {len(report.files)} ({files_with_gaps} with gaps)")
 
     # Find suggestions
     suggestions, warnings = find_coverage_gaps(
@@ -55,14 +57,22 @@ def cmd_gaps(args):
         source_root=args.source_root,
     )
 
-    # Show warnings about files we couldn't process
-    if warnings:
-        print(f"\nWarnings: {len(warnings)} files could not be analyzed")
-        if args.verbose:
-            for w in warnings[:5]:
-                print(f"  - {w}")
-            if len(warnings) > 5:
-                print(f"  ... and {len(warnings) - 5} more")
+    # Text mode: print headers and warnings
+    if args.format != "json":
+        print(f"\n{'='*60}")
+        print("code-covered")
+        print(f"{'='*60}")
+        print(f"Coverage: {report.coverage_percent:.1f}% ({report.total_covered}/{report.total_covered + report.total_missing} lines)")
+        print(f"Files analyzed: {len(report.files)} ({files_with_gaps} with gaps)")
+
+        # Show warnings about files we couldn't process
+        if warnings:
+            print(f"\nWarnings: {len(warnings)} files could not be analyzed")
+            if args.verbose:
+                for w in warnings[:5]:
+                    print(f"  - {w}")
+                if len(warnings) > 5:
+                    print(f"  ... and {len(warnings) - 5} more")
 
     # Apply filters
     if args.priority:
@@ -72,7 +82,28 @@ def cmd_gaps(args):
         suggestions = suggestions[:args.limit]
 
     if not suggestions:
-        print("\nNo coverage gaps found - great job!")
+        if args.format == "json":
+            print(json.dumps({
+                "coverage_percent": report.coverage_percent,
+                "files_analyzed": len(report.files),
+                "files_with_gaps": files_with_gaps,
+                "suggestions": [],
+                "warnings": sorted(warnings),
+            }, indent=2, sort_keys=True))
+        else:
+            print("\nNo coverage gaps found - great job!")
+        return 0
+
+    # JSON output mode
+    if args.format == "json":
+        output = {
+            "coverage_percent": report.coverage_percent,
+            "files_analyzed": len(report.files),
+            "files_with_gaps": files_with_gaps,
+            "suggestions": [s.to_dict() for s in suggestions],
+            "warnings": sorted(warnings),
+        }
+        print(json.dumps(output, indent=2, sort_keys=True))
         return 0
 
     # Group by priority
@@ -154,6 +185,12 @@ def main():
         type=int,
         metavar="N",
         help="Limit number of suggestions"
+    )
+    parser.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format (default: text)"
     )
 
     args = parser.parse_args()

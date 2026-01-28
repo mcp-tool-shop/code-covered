@@ -436,9 +436,13 @@ class GapSuggestionGenerator:
             if suggestion:
                 suggestions.append(suggestion)
 
-        # Sort by priority
+        # Sort by priority, then file, then line for deterministic output
         priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-        suggestions.sort(key=lambda s: priority_order.get(s.priority, 4))
+        suggestions.sort(key=lambda s: (
+            priority_order.get(s.priority, 4),
+            s.test_file,
+            s.covers_lines[0] if s.covers_lines else 0,
+        ))
 
         return suggestions
 

@@ -1,5 +1,9 @@
 # code-covered
 
+[![PyPI version](https://img.shields.io/pypi/v/code-covered.svg)](https://pypi.org/project/code-covered/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 **Find coverage gaps and suggest what tests to write.**
 
 Coverage tools tell you *what* lines aren't tested. `code-covered` tells you *what tests to write*.

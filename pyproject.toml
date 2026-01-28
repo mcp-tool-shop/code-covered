@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "code-covered"
-version = "0.3.0"
-description = "Find coverage gaps and generate the tests you're missing"
+version = "0.4.0"
+description = "Find coverage gaps and suggest what tests to write"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
@@ -25,19 +25,13 @@ classifiers = [
     "Topic :: Software Development :: Quality Assurance",
 ]
 
-# Core dependencies - just coverage.py for parsing
+# Zero runtime dependencies - just stdlib
 dependencies = []
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
-]
-# Anomaly detection features (optional)
-anomaly = [
-    "numpy>=1.24",
-    "scikit-learn>=1.3",
-    "hnswlib>=0.7",
 ]
 
 [project.urls]

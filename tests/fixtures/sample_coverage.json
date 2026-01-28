@@ -1,0 +1,46 @@
+{
+  "meta": {
+    "version": "7.3.2",
+    "timestamp": "2024-01-15T10:30:00",
+    "branch_coverage": true,
+    "show_contexts": false
+  },
+  "files": {
+    "src/validator.py": {
+      "executed_lines": [1, 2, 3, 5, 6, 8, 9, 10, 15, 16, 20, 21, 22],
+      "summary": {
+        "covered_lines": 13,
+        "num_statements": 22,
+        "percent_covered": 59.09,
+        "missing_lines": 9,
+        "excluded_lines": 0
+      },
+      "missing_lines": [4, 7, 11, 12, 13, 14, 17, 18, 19],
+      "excluded_lines": [],
+      "missing_branches": {
+        "5": [7],
+        "10": [11, 14]
+      }
+    },
+    "src/parser.py": {
+      "executed_lines": [1, 2, 3, 4, 5],
+      "summary": {
+        "covered_lines": 5,
+        "num_statements": 5,
+        "percent_covered": 100.0,
+        "missing_lines": 0,
+        "excluded_lines": 0
+      },
+      "missing_lines": [],
+      "excluded_lines": [],
+      "missing_branches": {}
+    }
+  },
+  "totals": {
+    "covered_lines": 18,
+    "num_statements": 27,
+    "percent_covered": 66.67,
+    "missing_lines": 9,
+    "excluded_lines": 0
+  }
+}

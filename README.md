@@ -1,6 +1,6 @@
 # code-covered
 
-**Find coverage gaps and generate the tests you're missing.**
+**Find coverage gaps and suggest what tests to write.**
 
 Coverage tools tell you *what* lines aren't tested. `code-covered` tells you *what tests to write*.
 
@@ -13,22 +13,22 @@ Name                 Stmts   Miss  Cover
 myapp/validator.py      47     12    74%
 ```
 
-Great, 74% coverage. But which 12 lines? And what tests would cover them?
+74% coverage. 12 lines missing. But *which* 12 lines? And what tests would cover them?
 
 ## The Solution
 
 ```
-$ code-covered gaps coverage.json
+$ code-covered coverage.json
 
 ============================================================
-Code-Covered - Coverage Gap Finder
+code-covered
 ============================================================
 Coverage: 74.5% (35/47 lines)
-Files with gaps: 1
+Files analyzed: 1 (1 with gaps)
 
-Found 4 missing tests:
-  - CRITICAL: 2
-  - HIGH: 2
+Missing tests: 4
+  [!!] CRITICAL: 2
+  [!]  HIGH: 2
 
 Top suggestions:
   1. [!!] test_validator_validate_input_handles_exception
@@ -57,20 +57,13 @@ pip install code-covered
 pytest --cov=myapp --cov-report=json
 
 # 2. Find what tests you're missing
-code-covered gaps coverage.json
+code-covered coverage.json
 
-# 3. Generate test stubs to a file
-code-covered gaps coverage.json -o tests/test_gaps.py
+# 3. Generate test stubs
+code-covered coverage.json -o tests/test_gaps.py
 ```
 
 ## Features
-
-### Coverage Gap Analysis
-
-Reads `coverage.json` and tells you:
-- **What's uncovered**: Not just line numbers, but the actual code context
-- **Why it matters**: Prioritizes exception handlers and error paths as critical
-- **What to test**: Generates specific test templates for each gap
 
 ### Priority Levels
 
@@ -110,31 +103,31 @@ Hints: Mock HTTP requests with responses or httpx, Use @pytest.mark.asyncio deco
 
 ```bash
 # Basic usage
-code-covered gaps coverage.json
+code-covered coverage.json
 
-# Verbose output with full templates
-code-covered gaps coverage.json -v
+# Show full templates
+code-covered coverage.json -v
 
 # Filter by priority
-code-covered gaps coverage.json --priority critical
+code-covered coverage.json --priority critical
 
 # Limit results
-code-covered gaps coverage.json --limit 5
+code-covered coverage.json --limit 5
 
-# Output test stubs to file
-code-covered gaps coverage.json -o tests/test_missing.py
+# Write test stubs to file
+code-covered coverage.json -o tests/test_missing.py
 
 # Specify source root (if coverage paths are relative)
-code-covered gaps coverage.json --source-root ./src
+code-covered coverage.json --source-root ./src
 ```
 
 ## Python API
 
 ```python
-from code_covered.analyzer import find_coverage_gaps, print_coverage_gaps
+from analyzer import find_coverage_gaps, print_coverage_gaps
 
 # Find gaps
-suggestions = find_coverage_gaps("coverage.json")
+suggestions, warnings = find_coverage_gaps("coverage.json")
 
 # Print formatted output
 print_coverage_gaps(suggestions)
@@ -156,12 +149,6 @@ for s in suggestions:
    - What function/class is it in?
 4. **Template Generation** - Creates specific test templates based on context
 5. **Prioritization** - Ranks by importance (error paths > branches > other)
-
-## Training Data
-
-This project includes 5,158 validated function→test pairs extracted from popular Python libraries (pytest, pydantic, aiohttp, etc.). This data can be used to fine-tune models for smarter test generation.
-
-See `F:/AI/checkpoints/code-covered/` for the dataset.
 
 ## License
 

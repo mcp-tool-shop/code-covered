@@ -1,41 +1,43 @@
 """
-Code Analysis Module for Code-Covered
+Code-Covered Analyzer
 
-Three complementary analysis approaches:
-- CoverageParser: Reads coverage.py output to find untested code
+Tells you WHAT tests to write, not just what's uncovered.
+
+Core components:
+- CoverageParser: Reads coverage.py JSON output
 - GapAnalyzer: Maps uncovered lines to specific test suggestions
-- StaticAnalyzer: AST-based syntactic pattern detection
-- AnomalyDetector: Embedding-based semantic outlier detection (HNSW)
+- GapSuggestionGenerator: Creates actionable test templates
 
-Together they provide comprehensive code coverage analysis.
+Usage:
+    from analyzer import find_coverage_gaps
+
+    suggestions, warnings = find_coverage_gaps("coverage.json")
+    for s in suggestions:
+        print(f"{s.priority}: {s.test_name}")
 """
 
-from .anomaly_detector import AnomalyDetector, AnomalyScore
-from .static_analyzer import StaticAnalyzer, StaticIssue, IssueType, FunctionInfo
-from .test_generator import TestGenerator, GeneratedTest
 from .coverage_gaps import (
     CoverageParser,
     CoverageReport,
     FileCoverage,
     GapAnalyzer,
     GapSuggestion,
+    GapSuggestionGenerator,
     UncoveredBlock,
     find_coverage_gaps,
     print_coverage_gaps,
 )
 
 __all__ = [
-    # Coverage gap analysis
+    # Main entry point
+    "find_coverage_gaps",
+    "print_coverage_gaps",
+    # Data structures
     "CoverageParser",
     "CoverageReport",
     "FileCoverage",
     "GapAnalyzer",
     "GapSuggestion",
+    "GapSuggestionGenerator",
     "UncoveredBlock",
-    "find_coverage_gaps",
-    "print_coverage_gaps",
-    # Static analysis
-    "AnomalyDetector", "AnomalyScore",
-    "StaticAnalyzer", "StaticIssue", "IssueType", "FunctionInfo",
-    "TestGenerator", "GeneratedTest",
 ]

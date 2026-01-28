@@ -7,7 +7,7 @@ name = "code-covered"
 version = "0.5.0"
 description = "Find coverage gaps and suggest what tests to write"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 requires-python = ">=3.10"
 authors = [
     {name = "mcp-tool-shop", email = "64996768+mcp-tool-shop@users.noreply.github.com"}
@@ -16,7 +16,6 @@ keywords = ["coverage", "testing", "pytest", "test-generation", "code-coverage"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -24,6 +23,8 @@ classifiers = [
     "Topic :: Software Development :: Testing",
     "Topic :: Software Development :: Quality Assurance",
 ]
+
+license-files = ["LICENSE"]
 
 # Zero runtime dependencies - just stdlib
 dependencies = []

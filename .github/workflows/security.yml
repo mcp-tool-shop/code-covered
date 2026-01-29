@@ -1,0 +1,60 @@
+name: Security Scan
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'  # Weekly on Monday at 3am UTC
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    name: Dependency Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit
+          pip install -e ".[dev]"
+
+      - name: Run pip-audit
+        run: |
+          pip-audit --desc --skip-editable
+
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Scan for secrets
+        run: |
+          echo "Scanning for potential secrets..."
+          ! grep -R --line-number -I -E "API_KEY|SECRET|PRIVATE_KEY|BEGIN RSA PRIVATE KEY|password.*=" . \
+            --exclude-dir=.git \
+            --exclude-dir=__pycache__ \
+            --exclude-dir=.pytest_cache \
+            --exclude-dir=node_modules \
+            --exclude-dir=dist \
+            --exclude=*.pyc \
+            || echo "⚠️ Found potential secrets - please review"

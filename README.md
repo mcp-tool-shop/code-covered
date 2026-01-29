@@ -1,5 +1,7 @@
 # code-covered
 
+[![CI Tests](https://github.com/mcp-tool-shop/code-covered/actions/workflows/ci.yml/badge.svg)](https://github.com/mcp-tool-shop/code-covered/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/mcp-tool-shop/code-covered/branch/master/graph/badge.svg)](https://codecov.io/gh/mcp-tool-shop/code-covered)
 [![PyPI version](https://img.shields.io/pypi/v/code-covered.svg)](https://pypi.org/project/code-covered/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -56,6 +58,8 @@ pip install code-covered
 
 ## Quick Start
 
+### For Users
+
 ```bash
 # 1. Run your tests with coverage JSON output
 pytest --cov=myapp --cov-report=json
@@ -65,6 +69,33 @@ code-covered coverage.json
 
 # 3. Generate test stubs
 code-covered coverage.json -o tests/test_gaps.py
+```
+
+### For Developers
+
+```bash
+# Clone the repository
+git clone https://github.com/mcp-tool-shop/code-covered.git
+cd code-covered
+
+# Create and activate virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install in development mode with dev dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest -v
+
+# Run with coverage
+pytest --cov=analyzer --cov=mcp_code_covered --cov=cli --cov-report=term-missing
+
+# Run linting
+ruff check analyzer mcp_code_covered cli.py tests
+
+# Run type checking
+pyright analyzer mcp_code_covered cli.py tests
 ```
 
 ## Features

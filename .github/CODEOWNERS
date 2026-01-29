@@ -1,0 +1,5 @@
+# Default owners for everything in the repo
+* @mcp-tool-shop
+
+# Specific ownership for workflows and CI
+/.github/ @mcp-tool-shop
